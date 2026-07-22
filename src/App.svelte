@@ -73,6 +73,7 @@
   let settingsError = $state('');
   let status = $state('Select a live signal to inspect its possible paths.');
   let showCoach = $state(localStorage.getItem('factorbit-coach-seen') !== 'true');
+  let showSolvedCard = $state(true);
 
   let solved = $derived(isSolved(matrix, puzzle.solutions));
   let legalMoves = $derived(selected ? diagonalCells(matrix.length, selected) : []);
@@ -87,6 +88,7 @@
     matrix = action(matrix);
     moves += 1;
     selected = null;
+    showSolvedCard = true;
     status = isSolved(matrix, puzzle.solutions) ? 'Factor lock acquired. The signal resolves cleanly.' : message;
   }
 
@@ -137,6 +139,7 @@
     selected = null;
     panel = null;
     solutionIndex = 0;
+    showSolvedCard = true;
     status = 'Puzzle reset. The original product signal has been restored.';
   }
 
@@ -148,6 +151,7 @@
     selected = null;
     panel = null;
     solutionIndex = 0;
+    showSolvedCard = true;
     status = 'New signal acquired. Select a live bit to begin.';
   }
 
@@ -159,6 +163,7 @@
     selected = null;
     panel = null;
     solutionIndex = 0;
+    showSolvedCard = true;
     status = 'Training signal 15 loaded. Start by selecting any red signal.';
     showCoach = true;
   }
@@ -166,6 +171,13 @@
   function dismissCoach() {
     showCoach = false;
     localStorage.setItem('factorbit-coach-seen', 'true');
+  }
+
+  function dismissSolvedCard() {
+    showSolvedCard = false;
+    solutionIndex = 0;
+    panel = 'solution';
+    selected = null;
   }
 
   function saveSettings() {
@@ -300,13 +312,19 @@
         </aside>
       {/if}
 
-      {#if solved}
-        <aside class="solved-card" transition:fly={{ y: 14, duration: 300 }}>
+      {#if solved && showSolvedCard}
+        <aside class="solved-card" transition:fly={{ y: 14, duration: 300 }} aria-label="Puzzle solved">
+          <button class="icon-button dismiss-solved" type="button" onclick={dismissSolvedCard} aria-label="Dismiss solved confirmation"><Icon name="close" /></button>
           <span>FACTOR LOCK / CONFIRMED</span>
-          <h2>{puzzle.factorA} × {puzzle.factorB} = {puzzle.product}</h2>
-          <code>{puzzle.productBits}</code>
+          <div class="solved-equation" aria-label={`${puzzle.factorA} times ${puzzle.factorB} equals ${puzzle.product}`}>
+            <div class="completion-operand"><strong>{puzzle.factorA}</strong><code>{puzzle.factorA.toString(2)}</code></div>
+            <b>×</b>
+            <div class="completion-operand"><strong>{puzzle.factorB}</strong><code>{puzzle.factorB.toString(2)}</code></div>
+            <b>=</b>
+            <div class="completion-operand product"><strong>{puzzle.product}</strong><code>{puzzle.productBits}</code></div>
+          </div>
           <p>Signal resolved in {moves} move{moves === 1 ? '' : 's'} with full value integrity.</p>
-          <button type="button" onclick={newGame}>Acquire next signal <Icon name="arrow" /></button>
+          <button class="next-signal" type="button" onclick={newGame}>Acquire next signal <Icon name="arrow" /></button>
         </aside>
       {/if}
     </section>

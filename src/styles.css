@@ -88,10 +88,16 @@ main { width: min(100%, 1540px); margin: 0 auto; padding: 0 clamp(1rem, 4vw, 4.5
 
 .solved-card { position: absolute; inset: 3rem 0 auto; z-index: 6; width: min(34rem, calc(100% - 2rem)); margin: auto; padding: 2.6rem; border: 1px solid var(--acid); background: #181913f2; box-shadow: 0 2rem 8rem #000; text-align: center; }
 .solved-card > span { color: var(--acid); font-size: 0.56rem; letter-spacing: 0.15em; }
-.solved-card h2 { margin: 1rem 0 0.5rem; font: 400 3.4rem/1 'Instrument Serif', Georgia, serif; }
-.solved-card code { color: var(--cyan); font-size: 0.8rem; letter-spacing: 0.2em; }
+.solved-equation { margin: 1.35rem auto 1rem; display: grid; grid-template-columns: 1fr auto 1fr auto 1.25fr; align-items: center; gap: 0.75rem; }
+.solved-equation > b { color: var(--muted); font: 400 1.15rem/1 'DM Mono', monospace; }
+.completion-operand { display: grid; gap: 0.28rem; }
+.completion-operand strong { color: var(--paper); font: 400 3rem/0.9 'Instrument Serif', Georgia, serif; }
+.completion-operand code { color: var(--cyan); font-size: 0.7rem; letter-spacing: 0.14em; }
+.completion-operand.product { padding-left: 0.75rem; border-left: 1px solid var(--line); }
 .solved-card p { color: var(--muted); font-size: 0.64rem; }
-.solved-card button, .panel-cta { min-height: 3rem; margin-top: 1.2rem; padding: 0 1.2rem; border: 1px solid var(--acid); background: var(--acid); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; gap: 0.7rem; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.09em; cursor: pointer; }
+.solved-card .dismiss-solved { position: absolute; top: 0.8rem; right: 0.8rem; color: var(--muted); }
+.solved-card .dismiss-solved:hover { color: var(--paper); }
+.solved-card .next-signal, .panel-cta { min-height: 3rem; margin-top: 1.2rem; padding: 0 1.2rem; border: 1px solid var(--acid); background: var(--acid); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; gap: 0.7rem; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.09em; cursor: pointer; }
 
 .scrim { position: fixed; inset: 0; z-index: 15; display: flex; justify-content: flex-end; background: #0009; backdrop-filter: blur(4px); }
 .panel { width: min(32rem, 100%); min-height: 100%; overflow-y: auto; border-left: 1px solid var(--line); background: #171714; box-shadow: -2rem 0 6rem #0008; }
@@ -153,6 +159,11 @@ main { width: min(100%, 1540px); margin: 0 auto; padding: 0 clamp(1rem, 4vw, 4.5
   .operand.product { padding-left: 0.35rem; }
   .solution-trace .solution-tabs { grid-column: 1 / -1; grid-row: 2; width: 100%; }
   .solution-trace > .icon-button { position: absolute; top: 0.55rem; right: 0.55rem; }
+  .solved-card { padding: 2.4rem 1.2rem 1.6rem; }
+  .solved-equation { gap: 0.35rem; }
+  .completion-operand strong { font-size: 2.2rem; }
+  .completion-operand code { font-size: 0.56rem; letter-spacing: 0.07em; overflow-wrap: anywhere; }
+  .completion-operand.product { padding-left: 0.4rem; }
   .coach { left: 0.8rem; width: calc(100% - 1.6rem); }
   .settings-content fieldset { grid-template-columns: 1fr; }
 }
