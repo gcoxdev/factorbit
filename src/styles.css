@@ -76,7 +76,7 @@ main { width: min(100%, 1540px); margin: 0 auto; padding: 0 clamp(1rem, 4vw, 4.5
 .operand strong { color: var(--paper); font: 400 1.55rem/1 'Instrument Serif', Georgia, serif; }
 .operand code { color: var(--cyan); font-size: 0.55rem; letter-spacing: 0.1em; }
 .operand.product { padding-left: 0.65rem; border-left: 1px solid var(--line); }
-.solution-trace .solution-tabs { width: 11rem; margin: 0; }
+.solution-trace .solution-tabs { width: 16rem; margin: 0; }
 .coach { position: absolute; top: 4.4rem; left: 1.4rem; z-index: 5; width: min(22rem, calc(100% - 2.8rem)); padding: 1.25rem 1.35rem 1.35rem; border: 1px solid #5a574e; background: #e6dfd2; color: #171714; box-shadow: 0.7rem 0.7rem 0 #0008; transform: rotate(-0.5deg); }
 .coach::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, transparent 0 1.4rem, #0000000a 1.4rem calc(1.4rem + 1px)); }
 .coach-index { font-size: 0.52rem; letter-spacing: 0.12em; color: #6f6b63; }

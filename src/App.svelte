@@ -23,6 +23,7 @@
   } from './lib/game';
 
   type Panel = 'help' | 'settings' | 'solution' | null;
+  type SolutionIndex = 0 | 1 | 2;
   type HistoryEntry = { matrix: Matrix; moves: number };
 
   const storedRange = (() => {
@@ -69,7 +70,7 @@
   let moves = $state(0);
   let history = $state.raw<HistoryEntry[]>([]);
   let panel = $state<Panel>(null);
-  let solutionIndex = $state(0);
+  let solutionIndex = $state<SolutionIndex>(0);
   let settingsError = $state('');
   let status = $state('Select a live signal to inspect its possible paths.');
   let showCoach = $state(localStorage.getItem('factorbit-coach-seen') !== 'true');
@@ -79,9 +80,10 @@
   let legalMoves = $derived(selected ? diagonalCells(matrix.length, selected) : []);
   let splitReady = $derived(selected ? canSplit(matrix, selected) : false);
   let joinReady = $derived(selected ? canJoin(matrix, selected) : false);
-  let boardMatrix = $derived(panel === 'solution' ? puzzle.solutions[solutionIndex] : matrix);
-  let solutionLeft = $derived(solutionIndex === 0 ? puzzle.factorA : puzzle.factorB);
-  let solutionRight = $derived(solutionIndex === 0 ? puzzle.factorB : puzzle.factorA);
+  let solutionMatrices = $derived([puzzle.solutions[0], puzzle.solutions[1], puzzle.splitSolution] as const);
+  let boardMatrix = $derived(panel === 'solution' ? solutionMatrices[solutionIndex] : matrix);
+  let solutionLeft = $derived(solutionIndex === 1 ? puzzle.factorB : puzzle.factorA);
+  let solutionRight = $derived(solutionIndex === 1 ? puzzle.factorA : puzzle.factorB);
 
   function record(action: (current: Matrix) => Matrix, message: string) {
     history = [...history, { matrix: cloneMatrix(matrix), moves }];
@@ -283,9 +285,10 @@
             <b>=</b>
             <div class="operand product"><strong>{puzzle.product}</strong><code>{puzzle.productBits}</code></div>
           </div>
-          <div class="solution-tabs" aria-label="Solution ordering">
+          <div class="solution-tabs" aria-label="Solution pattern">
             <button class:active={solutionIndex === 0} type="button" onclick={() => (solutionIndex = 0)}>A × B</button>
             <button class:active={solutionIndex === 1} type="button" onclick={() => (solutionIndex = 1)}>B × A</button>
+            <button class:active={solutionIndex === 2} type="button" onclick={() => (solutionIndex = 2)}>Split</button>
           </div>
           <button class="icon-button" type="button" onclick={() => (panel = null)} aria-label="Close solution trace"><Icon name="close" /></button>
         </div>

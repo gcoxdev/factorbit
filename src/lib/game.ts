@@ -8,6 +8,7 @@ export interface Puzzle {
   productBits: string;
   matrix: Matrix;
   solutions: readonly [Matrix, Matrix];
+  splitSolution: Matrix;
 }
 
 export interface RangeSettings {
@@ -61,19 +62,38 @@ export function solutionMatrix(factorRows: number, factorColumns: number, width:
     .map((bit) => (bit === '1' ? [...columnBits] : [...zeroRow]));
 }
 
+export function collapseToFirstRow(matrix: Matrix): Matrix {
+  const size = matrix.length;
+  const collapsed = Array.from({ length: size }, () => Array(size).fill(0) as number[]);
+
+  matrix.forEach((row, rowIndex) => {
+    if (row.length !== size) throw new Error('Solution matrix must be square.');
+    row.forEach((count, columnIndex) => {
+      if (!count) return;
+      const targetColumn = originIndex([rowIndex, columnIndex]);
+      if (targetColumn < 0 || targetColumn >= size) {
+        throw new Error('Signals below the value diagonal cannot collapse to the first row.');
+      }
+      collapsed[0][targetColumn] += count;
+    });
+  });
+
+  return collapsed;
+}
+
 export function createPuzzle(factorA: number, factorB: number): Puzzle {
   const product = factorA * factorB;
   const productBits = toBinary(product);
+  const solutionA = solutionMatrix(factorA, factorB, productBits.length);
+  const solutionB = solutionMatrix(factorB, factorA, productBits.length);
   return {
     factorA,
     factorB,
     product,
     productBits,
     matrix: startingMatrix(productBits),
-    solutions: [
-      solutionMatrix(factorA, factorB, productBits.length),
-      solutionMatrix(factorB, factorA, productBits.length)
-    ]
+    solutions: [solutionA, solutionB],
+    splitSolution: collapseToFirstRow(solutionA)
   };
 }
 
