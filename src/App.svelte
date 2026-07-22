@@ -131,6 +131,9 @@
     moves = previous.moves;
     history = history.slice(0, -1);
     selected = null;
+    panel = null;
+    solutionIndex = 0;
+    showSolvedCard = true;
     status = 'Last operation reversed.';
   }
 
