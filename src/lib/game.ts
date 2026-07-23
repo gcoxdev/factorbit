@@ -143,8 +143,12 @@ export function isSameCoordinate(left: Coordinate, right: Coordinate): boolean {
 export function canSplit(matrix: Matrix, coordinate: Coordinate): boolean {
   const nextOrigin = originIndex(coordinate) + 1;
   if (nextOrigin >= matrix.length) return false;
-  const nextDiagonal = diagonalCells(matrix.length, [0, nextOrigin]);
-  return nextDiagonal.filter(([row, column]) => matrix[row][column] === 0).length >= 2;
+  let emptyCells = 0;
+  for (let row = 0; row < matrix.length - nextOrigin; row += 1) {
+    if (matrix[row][row + nextOrigin] === 0) emptyCells += 1;
+    if (emptyCells === 2) return true;
+  }
+  return false;
 }
 
 export function canJoin(matrix: Matrix, coordinate: Coordinate): boolean {
