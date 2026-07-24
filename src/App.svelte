@@ -13,7 +13,7 @@
     isSolved,
     joinTokens,
     moveToken,
-    primesBetween,
+    firstPrimeBetween,
     randomPuzzle,
     splitToken,
     type Coordinate,
@@ -25,45 +25,75 @@
   type Panel = 'help' | 'settings' | 'solution' | null;
   type SolutionIndex = 0 | 1 | 2;
   type HistoryEntry = { matrix: Matrix; moves: number };
+  type RangeDraft = Record<keyof RangeSettings, string>;
+
+  const parseStoredInteger = (value: unknown): bigint | null => {
+    if (typeof value === 'string' && /^\d+$/.test(value)) return BigInt(value);
+    if (typeof value === 'number' && Number.isSafeInteger(value)) return BigInt(value);
+    return null;
+  };
+
+  const parseStoredRange = (value: unknown): RangeSettings | null => {
+    if (!value || typeof value !== 'object') return null;
+    const stored = value as Record<string, unknown>;
+    const factorAMinimum = parseStoredInteger(stored.factorAMinimum);
+    const factorAMaximum = parseStoredInteger(stored.factorAMaximum);
+    const factorBMinimum = parseStoredInteger(stored.factorBMinimum);
+    const factorBMaximum = parseStoredInteger(stored.factorBMaximum);
+    if (
+      factorAMinimum !== null &&
+      factorAMaximum !== null &&
+      factorBMinimum !== null &&
+      factorBMaximum !== null &&
+      factorAMinimum >= 2n &&
+      factorBMinimum >= 2n &&
+      factorAMaximum >= factorAMinimum &&
+      factorBMaximum >= factorBMinimum &&
+      firstPrimeBetween(factorAMinimum, factorAMaximum) !== null &&
+      firstPrimeBetween(factorBMinimum, factorBMaximum) !== null
+    ) {
+      return { factorAMinimum, factorAMaximum, factorBMinimum, factorBMaximum };
+    }
+
+    const minimum = parseStoredInteger(stored.minimum);
+    const maximum = parseStoredInteger(stored.maximum);
+    if (
+      minimum !== null &&
+      maximum !== null &&
+      minimum >= 2n &&
+      maximum >= minimum &&
+      firstPrimeBetween(minimum, maximum) !== null
+    ) {
+      return {
+        factorAMinimum: minimum,
+        factorAMaximum: maximum,
+        factorBMinimum: minimum,
+        factorBMaximum: maximum
+      };
+    }
+    return null;
+  };
 
   const storedRange = (() => {
     try {
-      const value = JSON.parse(localStorage.getItem('factorbit-range') ?? 'null') as Partial<RangeSettings> & { minimum?: number; maximum?: number } | null;
-      if (
-        value &&
-        Number.isInteger(value.factorAMinimum) &&
-        Number.isInteger(value.factorAMaximum) &&
-        Number.isInteger(value.factorBMinimum) &&
-        Number.isInteger(value.factorBMaximum) &&
-        value.factorAMinimum! >= 2 &&
-        value.factorBMinimum! >= 2 &&
-        value.factorAMaximum! >= value.factorAMinimum! &&
-        value.factorBMaximum! >= value.factorBMinimum! &&
-        primesBetween(value.factorAMinimum!, value.factorAMaximum!).length > 0 &&
-        primesBetween(value.factorBMinimum!, value.factorBMaximum!).length > 0
-      ) return value as RangeSettings;
-      if (
-        value?.minimum &&
-        value?.maximum &&
-        value.maximum >= value.minimum &&
-        primesBetween(value.minimum, value.maximum).length > 0
-      ) {
-        return {
-          factorAMinimum: value.minimum,
-          factorAMaximum: value.maximum,
-          factorBMinimum: value.minimum,
-          factorBMaximum: value.maximum
-        };
-      }
-      return DEFAULT_RANGE;
+      return parseStoredRange(
+        JSON.parse(localStorage.getItem('factorbit-range') ?? 'null')
+      ) ?? DEFAULT_RANGE;
     } catch {
       return DEFAULT_RANGE;
     }
   })();
 
+  const rangeDraft = (value: RangeSettings): RangeDraft => ({
+    factorAMinimum: value.factorAMinimum.toString(),
+    factorAMaximum: value.factorAMaximum.toString(),
+    factorBMinimum: value.factorBMinimum.toString(),
+    factorBMaximum: value.factorBMaximum.toString()
+  });
+  const storedBoardScale = Number(localStorage.getItem('factorbit-board-scale'));
   const initialPuzzle = randomPuzzle(storedRange);
   let range = $state<RangeSettings>({ ...storedRange });
-  let draftRange = $state<RangeSettings>({ ...storedRange });
+  let draftRange = $state<RangeDraft>(rangeDraft(storedRange));
   let puzzle = $state.raw<Puzzle>(initialPuzzle);
   let matrix = $state.raw<Matrix>(cloneMatrix(initialPuzzle.matrix));
   let selected = $state<Coordinate | null>(null);
@@ -75,6 +105,13 @@
   let status = $state('Select a live signal to inspect its possible paths.');
   let showCoach = $state(localStorage.getItem('factorbit-coach-seen') !== 'true');
   let showSolvedCard = $state(true);
+  let boardScale = $state(
+    Number.isInteger(storedBoardScale) &&
+      storedBoardScale >= 25 &&
+      storedBoardScale <= 100
+      ? storedBoardScale
+      : 100
+  );
 
   let solved = $derived(isSolved(matrix, puzzle.solutions));
   let legalMoves = $derived(selected ? diagonalCells(matrix.length, selected) : []);
@@ -161,7 +198,7 @@
   }
 
   function loadTeachingPuzzle() {
-    puzzle = createPuzzle(3, 5);
+    puzzle = createPuzzle(3n, 5n);
     matrix = cloneMatrix(puzzle.matrix);
     moves = 0;
     history = [];
@@ -187,34 +224,42 @@
 
   function saveSettings() {
     const values = Object.values(draftRange);
-    if (values.some((value) => !Number.isInteger(value) || value < 2)) {
+    if (values.some((value) => !/^\d+$/.test(value))) {
+      settingsError = 'Use whole numbers of 2 or greater for every bound.';
+      return;
+    }
+    const parsed = Object.fromEntries(
+      Object.entries(draftRange).map(([key, value]) => [key, BigInt(value)])
+    ) as unknown as RangeSettings;
+    if (Object.values(parsed).some((value) => value < 2n)) {
       settingsError = 'Use whole numbers of 2 or greater for every bound.';
       return;
     }
     if (
-      draftRange.factorAMinimum > draftRange.factorAMaximum ||
-      draftRange.factorBMinimum > draftRange.factorBMaximum
+      parsed.factorAMinimum > parsed.factorAMaximum ||
+      parsed.factorBMinimum > parsed.factorBMaximum
     ) {
       settingsError = 'Each minimum must be less than or equal to its matching maximum.';
       return;
     }
-    if (!Number.isSafeInteger(draftRange.factorAMaximum * draftRange.factorBMaximum)) {
-      settingsError = 'Those ranges can produce a number larger than the game can represent safely.';
-      return;
-    }
-    if (!primesBetween(draftRange.factorAMinimum, draftRange.factorAMaximum).length) {
+    if (firstPrimeBetween(parsed.factorAMinimum, parsed.factorAMaximum) === null) {
       settingsError = 'Factor A range contains no prime numbers.';
       return;
     }
-    if (!primesBetween(draftRange.factorBMinimum, draftRange.factorBMaximum).length) {
+    if (firstPrimeBetween(parsed.factorBMinimum, parsed.factorBMaximum) === null) {
       settingsError = 'Factor B range contains no prime numbers.';
       return;
     }
     settingsError = '';
-    range = { ...draftRange };
-    draftRange = { ...range };
-    localStorage.setItem('factorbit-range', JSON.stringify(range));
+    range = parsed;
+    draftRange = rangeDraft(range);
+    localStorage.setItem('factorbit-range', JSON.stringify(rangeDraft(range)));
     newGame();
+  }
+
+  function changeBoardScale(direction: -1 | 1) {
+    boardScale = Math.min(100, Math.max(25, boardScale + direction * 25));
+    localStorage.setItem('factorbit-board-scale', String(boardScale));
   }
 
   function togglePanel(next: Exclude<Panel, null>) {
@@ -232,6 +277,8 @@
     if (key === 'h' || key === '?') togglePanel('help');
     if (key === 'g') togglePanel('settings');
     if (key === 's') togglePanel('solution');
+    if (event.key === '-' || event.key === '_') changeBoardScale(-1);
+    if (event.key === '+' || event.key === '=') changeBoardScale(1);
     if (event.key === 'ArrowRight' && splitReady) {
       event.preventDefault();
       splitSelected();
@@ -257,10 +304,15 @@
         <strong>FACTORBIT</strong>
       </a>
 
-      <div class="play-controls" aria-label="Current move and transformation controls">
+      <div class="play-controls" aria-label="Current move, transformation, and board scale controls">
         <div class="move-readout" aria-label={`${moves} moves made`}><span>Moves</span><strong>{String(moves).padStart(2, '0')}</strong></div>
         <button class="join-action" type="button" onclick={joinSelected} disabled={!joinReady || solved || panel === 'solution'} title="Join selected signals (Left arrow)"><Icon name="join" /><span>Join</span></button>
         <button class="split-action" type="button" onclick={splitSelected} disabled={!splitReady || solved || panel === 'solution'} title="Split selected signal (Right arrow)"><Icon name="split" /><span>Split</span></button>
+        <div class="board-scale-control" aria-label="Board scale">
+          <button type="button" onclick={() => changeBoardScale(-1)} disabled={boardScale === 25} aria-label="Make board smaller" title="Make board smaller (-)">−</button>
+          <output aria-live="polite">{boardScale}%</output>
+          <button type="button" onclick={() => changeBoardScale(1)} disabled={boardScale === 100} aria-label="Make board larger" title="Make board larger (+)">+</button>
+        </div>
       </div>
     </header>
 
@@ -300,6 +352,7 @@
       <div class="board-scroll">
         <GameBoard
           matrix={boardMatrix}
+          scale={boardScale / 100}
           {selected}
           {legalMoves}
           solutionVisible={panel === 'solution'}
@@ -361,13 +414,13 @@
             <p class="panel-lede">Each hidden prime factor is selected independently from the inclusive range you define.</p>
             <fieldset>
               <legend>FACTOR A</legend>
-              <label><span>MINIMUM</span><input type="number" bind:value={draftRange.factorAMinimum} /></label>
-              <label><span>MAXIMUM</span><input type="number" bind:value={draftRange.factorAMaximum} /></label>
+              <label><span>MINIMUM</span><input type="text" inputmode="numeric" pattern="[0-9]*" bind:value={draftRange.factorAMinimum} /></label>
+              <label><span>MAXIMUM</span><input type="text" inputmode="numeric" pattern="[0-9]*" bind:value={draftRange.factorAMaximum} /></label>
             </fieldset>
             <fieldset>
               <legend>FACTOR B</legend>
-              <label><span>MINIMUM</span><input type="number" bind:value={draftRange.factorBMinimum} /></label>
-              <label><span>MAXIMUM</span><input type="number" bind:value={draftRange.factorBMaximum} /></label>
+              <label><span>MINIMUM</span><input type="text" inputmode="numeric" pattern="[0-9]*" bind:value={draftRange.factorBMinimum} /></label>
+              <label><span>MAXIMUM</span><input type="text" inputmode="numeric" pattern="[0-9]*" bind:value={draftRange.factorBMaximum} /></label>
             </fieldset>
             <div class="range-scale"><span>QUICK</span><i></i><span>COMPLEX</span></div>
             {#if settingsError}<p class="form-error" role="alert">{settingsError}</p>{/if}

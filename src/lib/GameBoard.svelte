@@ -4,6 +4,7 @@
 
   interface Props {
     matrix: Matrix;
+    scale: number;
     selected: Coordinate | null;
     legalMoves: Coordinate[];
     solutionVisible: boolean;
@@ -11,7 +12,7 @@
     oncell: (coordinate: Coordinate) => void;
   }
 
-  let { matrix, selected, legalMoves, solutionVisible, solved, oncell }: Props = $props();
+  let { matrix, scale, selected, legalMoves, solutionVisible, solved, oncell }: Props = $props();
 
   const isLegal = (coordinate: Coordinate) =>
     legalMoves.some((candidate) => isSameCoordinate(candidate, coordinate));
@@ -24,7 +25,7 @@
   };
 </script>
 
-<div class="board-frame" style:--size={matrix.length}>
+<div class="board-frame" style:--size={matrix.length} style:--board-scale={scale}>
   <div class="axis axis-top" aria-hidden="true">
     {#each matrix[0] as _, column (`power-${matrix.length - column - 1}`)}
       <span>2<sup>{matrix.length - column - 1}</sup></span>
@@ -77,7 +78,11 @@
 
 <style>
   .board-frame {
-    --cell: clamp(2.45rem, 6.2vw, 4.8rem);
+    --cell: clamp(
+      calc(2.45rem * var(--board-scale)),
+      calc(6.2vw * var(--board-scale)),
+      calc(4.8rem * var(--board-scale))
+    );
     position: relative;
     width: max-content;
     padding: 2.1rem 1.1rem 1.1rem 5.3rem;
@@ -236,7 +241,14 @@
   @keyframes breathe { 50% { transform: translate(-50%, -50%) scale(1.18); opacity: 0.55; } }
 
   @media (max-width: 620px) {
-    .board-frame { --cell: clamp(2.15rem, 11vw, 3.2rem); padding-left: 3.1rem; }
+    .board-frame {
+      --cell: clamp(
+        calc(2.15rem * var(--board-scale)),
+        calc(11vw * var(--board-scale)),
+        calc(3.2rem * var(--board-scale))
+      );
+      padding-left: 3.1rem;
+    }
     .axis-top { left: 3.1rem; }
     .row-axis { width: 2.65rem; }
     .row-axis span { font-size: 0; }

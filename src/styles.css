@@ -60,12 +60,19 @@ body::before {
 .utility button:hover:not(:disabled), .utility button.engaged { color: var(--paper); background: var(--ink-3); }
 .utility button.engaged { box-shadow: inset 0 -2px var(--red); }
 .utility button:disabled { opacity: 0.28; cursor: not-allowed; }
+.board-scale-control { display: grid; grid-template-columns: 2rem 3.15rem 2rem; min-width: 7.15rem; border-left: 1px solid var(--line); }
+.board-scale-control button { min-width: 2rem; height: auto; padding: 0; border: 0; background: transparent; color: var(--cyan); display: grid; place-items: center; font-size: 1rem; cursor: pointer; }
+.board-scale-control button:first-child { border-right: 1px solid var(--line); }
+.board-scale-control button:last-child { border-left: 1px solid var(--line); }
+.board-scale-control button:hover:not(:disabled) { background: var(--ink-3); color: var(--paper); }
+.board-scale-control button:disabled { color: var(--line); opacity: 1; cursor: not-allowed; }
+.board-scale-control output { display: grid; place-items: center; color: var(--muted); font-size: 0.54rem; letter-spacing: 0.08em; }
 .nav-rule { width: 1.5rem; border-left: 1px solid var(--line); }
 .sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important; }
 
 main { width: min(100%, 1540px); margin: 0 auto; padding: 0 clamp(1rem, 4vw, 4.5rem); }
 .workbench { position: relative; border: 1px solid var(--line); border-top: 0; background: color-mix(in srgb, var(--ink-2) 94%, transparent); box-shadow: 0 2rem 8rem #0005; }
-.board-scroll { display: grid; place-items: center; min-height: calc(100vh - 5rem - 1px); padding: 0.7rem 1rem 1rem; overflow-x: auto; overflow-y: hidden; scrollbar-color: var(--line) transparent; }
+.board-scroll { position: relative; display: grid; place-items: center; min-height: calc(100vh - 5rem - 1px); padding: 0.7rem 1rem 1rem; overflow-x: auto; overflow-y: hidden; scrollbar-color: var(--line) transparent; }
 .workbench.solution-visible .board-scroll { min-height: calc(100vh - 10rem - 1px); }
 .solution-trace { position: relative; min-height: 5rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 1rem; background: color-mix(in srgb, var(--cyan) 5%, var(--ink-3)); }
 .trace-equation { display: flex; align-items: center; gap: 0.7rem; }
@@ -135,6 +142,8 @@ main { width: min(100%, 1540px); margin: 0 auto; padding: 0 clamp(1rem, 4vw, 4.5
   .move-readout { width: 4.2rem; }
   .utility { overflow-x: auto; border-bottom: 1px solid var(--line); }
   .utility button { min-width: 4.3rem; height: 4rem; flex: 1; }
+  .board-scale-control button { min-width: 2rem; height: auto; flex: none; }
+  .board-scale-control { min-width: 7.15rem; flex: none; }
   .nav-rule { display: none; }
 }
 
@@ -146,6 +155,8 @@ main { width: min(100%, 1540px); margin: 0 auto; padding: 0 clamp(1rem, 4vw, 4.5
   .move-readout { width: 3.1rem; }
   .utility button { min-width: 3.8rem; padding: 0 0.4rem; }
   .utility button span { font-size: 0.46rem; }
+  .board-scale-control { grid-template-columns: 1.55rem 1.95rem 1.55rem; min-width: 5.05rem; }
+  .board-scale-control button { min-width: 1.55rem; }
   main { padding-inline: 0; }
   .workbench { border-inline: 0; }
   .board-scroll { min-height: calc(100vh - 8.2rem - 1px); justify-content: start; padding: 0.35rem 0 0.6rem; }

@@ -2,9 +2,9 @@ export type Coordinate = readonly [row: number, column: number];
 export type Matrix = number[][];
 
 export interface Puzzle {
-  factorA: number;
-  factorB: number;
-  product: number;
+  factorA: bigint;
+  factorB: bigint;
+  product: bigint;
   productBits: string;
   matrix: Matrix;
   solutions: readonly [Matrix, Matrix];
@@ -12,38 +12,136 @@ export interface Puzzle {
 }
 
 export interface RangeSettings {
-  factorAMinimum: number;
-  factorAMaximum: number;
-  factorBMinimum: number;
-  factorBMaximum: number;
+  factorAMinimum: bigint;
+  factorAMaximum: bigint;
+  factorBMinimum: bigint;
+  factorBMaximum: bigint;
 }
 
 export const DEFAULT_RANGE: RangeSettings = {
-  factorAMinimum: 3,
-  factorAMaximum: 20,
-  factorBMinimum: 3,
-  factorBMaximum: 20
+  factorAMinimum: 3n,
+  factorAMaximum: 20n,
+  factorBMinimum: 3n,
+  factorBMaximum: 20n
 };
 
-export function toBinary(value: number): string {
-  return Math.max(0, Math.trunc(value)).toString(2);
+export function toBinary(value: bigint): string {
+  return (value < 0n ? 0n : value).toString(2);
 }
 
-export function primesBetween(minimum: number, maximum: number): number[] {
-  const lower = Math.max(2, Math.ceil(minimum));
-  const upper = Math.max(lower, Math.floor(maximum));
-  const sieve = Array(upper + 1).fill(true) as boolean[];
-  sieve[0] = false;
-  sieve[1] = false;
+function modularPower(base: bigint, exponent: bigint, modulus: bigint): bigint {
+  let result = 1n;
+  let factor = base % modulus;
+  let remaining = exponent;
+  while (remaining > 0n) {
+    if (remaining & 1n) result = result * factor % modulus;
+    factor = factor * factor % modulus;
+    remaining >>= 1n;
+  }
+  return result;
+}
 
-  for (let prime = 2; prime * prime <= upper; prime += 1) {
-    if (!sieve[prime]) continue;
-    for (let multiple = prime * prime; multiple <= upper; multiple += prime) {
-      sieve[multiple] = false;
-    }
+const SMALL_PRIMES = [
+  2n, 3n, 5n, 7n, 11n, 13n, 17n, 19n, 23n, 29n, 31n, 37n
+] as const;
+const DETERMINISTIC_64_BIT_BASES = [
+  2n, 325n, 9_375n, 28_178n, 450_775n, 9_780_504n, 1_795_265_022n
+] as const;
+
+export function isPrime(value: bigint): boolean {
+  if (value < 2n) return false;
+  for (const prime of SMALL_PRIMES) {
+    if (value === prime) return true;
+    if (value % prime === 0n) return false;
   }
 
-  return sieve.flatMap((isPrime, value) => (isPrime && value >= lower ? [value] : []));
+  let oddPart = value - 1n;
+  let powerOfTwo = 0;
+  while ((oddPart & 1n) === 0n) {
+    oddPart >>= 1n;
+    powerOfTwo += 1;
+  }
+
+  const bases = value < 18_446_744_073_709_551_616n
+    ? DETERMINISTIC_64_BIT_BASES
+    : [...DETERMINISTIC_64_BIT_BASES, ...SMALL_PRIMES];
+  return bases.every((candidate) => {
+    const base = candidate % value;
+    if (base === 0n) return true;
+    let witness = modularPower(base, oddPart, value);
+    if (witness === 1n || witness === value - 1n) return true;
+    for (let round = 1; round < powerOfTwo; round += 1) {
+      witness = witness * witness % value;
+      if (witness === value - 1n) return true;
+    }
+    return false;
+  });
+}
+
+function firstPrimeFrom(start: bigint, maximum: bigint): bigint | null {
+  if (start <= 2n && maximum >= 2n) return 2n;
+  let candidate = start <= 3n ? 3n : start | 1n;
+  while (candidate <= maximum) {
+    if (isPrime(candidate)) return candidate;
+    candidate += 2n;
+  }
+  return null;
+}
+
+function firstPrimeBackward(start: bigint, minimum: bigint): bigint | null {
+  let candidate = start < 2n ? 1n : start;
+  if (candidate === 2n) return minimum <= 2n ? 2n : null;
+  if ((candidate & 1n) === 0n) candidate -= 1n;
+  while (candidate >= minimum && candidate >= 3n) {
+    if (isPrime(candidate)) return candidate;
+    candidate -= 2n;
+  }
+  return minimum <= 2n && start >= 2n ? 2n : null;
+}
+
+export function firstPrimeBetween(minimum: bigint, maximum: bigint): bigint | null {
+  if (maximum < 2n || maximum < minimum) return null;
+  return firstPrimeFrom(minimum < 2n ? 2n : minimum, maximum);
+}
+
+export function primesBetween(minimum: bigint, maximum: bigint): bigint[] {
+  const primes: bigint[] = [];
+  if (maximum < minimum) return primes;
+  let candidate = firstPrimeBetween(minimum, maximum);
+  while (candidate !== null) {
+    primes.push(candidate);
+    candidate = firstPrimeFrom(candidate + 1n, maximum);
+  }
+  return primes;
+}
+
+function randomBigIntBetween(
+  minimum: bigint,
+  maximum: bigint,
+  random: () => number
+): bigint {
+  const span = maximum - minimum + 1n;
+  const unit = Math.min(1 - Number.EPSILON, Math.max(0, random()));
+  const sample = BigInt(Math.floor(unit * Number.MAX_SAFE_INTEGER));
+  return minimum + sample * span / BigInt(Number.MAX_SAFE_INTEGER);
+}
+
+export function randomPrimeBetween(
+  minimum: bigint,
+  maximum: bigint,
+  random: () => number = Math.random
+): bigint {
+  const first = firstPrimeBetween(minimum, maximum);
+  if (first === null) throw new Error('Range contains no prime numbers.');
+  const unit = Math.min(1 - Number.EPSILON, Math.max(0, random()));
+  const start = randomBigIntBetween(minimum, maximum, () => unit);
+  return unit < 0.5
+    ? firstPrimeFrom(start, maximum) ??
+        firstPrimeFrom(minimum, start - 1n) ??
+        first
+    : firstPrimeBackward(start, minimum) ??
+        firstPrimeBackward(maximum, start + 1n) ??
+        first;
 }
 
 export function startingMatrix(productBits: string): Matrix {
@@ -52,7 +150,7 @@ export function startingMatrix(productBits: string): Matrix {
   );
 }
 
-export function solutionMatrix(factorRows: number, factorColumns: number, width: number): Matrix {
+export function solutionMatrix(factorRows: bigint, factorColumns: bigint, width: number): Matrix {
   const rowBits = toBinary(factorRows).padStart(width, '0');
   const columnBits = Array.from(toBinary(factorColumns).padStart(width, '0'), Number);
   const zeroRow = Array(width).fill(0) as number[];
@@ -81,7 +179,7 @@ export function collapseToFirstRow(matrix: Matrix): Matrix {
   return collapsed;
 }
 
-export function createPuzzle(factorA: number, factorB: number): Puzzle {
+export function createPuzzle(factorA: bigint, factorB: bigint): Puzzle {
   const product = factorA * factorB;
   const productBits = toBinary(product);
   const solutionA = solutionMatrix(factorA, factorB, productBits.length);
@@ -101,15 +199,19 @@ export function randomPuzzle(
   range: RangeSettings = DEFAULT_RANGE,
   random: () => number = Math.random
 ): Puzzle {
-  const factorAPrimes = primesBetween(range.factorAMinimum, range.factorAMaximum);
-  const factorBPrimes = primesBetween(range.factorBMinimum, range.factorBMaximum);
-  if (!factorAPrimes.length) throw new Error('Factor A range contains no prime numbers.');
-  if (!factorBPrimes.length) throw new Error('Factor B range contains no prime numbers.');
-  const choose = (primes: number[]) => primes[Math.min(primes.length - 1, Math.floor(random() * primes.length))];
-  return createPuzzle(
-    choose(factorAPrimes),
-    choose(factorBPrimes)
-  );
+  let factorA: bigint;
+  let factorB: bigint;
+  try {
+    factorA = randomPrimeBetween(range.factorAMinimum, range.factorAMaximum, random);
+  } catch {
+    throw new Error('Factor A range contains no prime numbers.');
+  }
+  try {
+    factorB = randomPrimeBetween(range.factorBMinimum, range.factorBMaximum, random);
+  } catch {
+    throw new Error('Factor B range contains no prime numbers.');
+  }
+  return createPuzzle(factorA, factorB);
 }
 
 export function cloneMatrix(matrix: Matrix): Matrix {
@@ -183,19 +285,21 @@ export function joinTokens(matrix: Matrix, coordinate: Coordinate): Matrix {
   return next;
 }
 
-export function representedValue(matrix: Matrix): number {
+export function representedValue(matrix: Matrix): bigint {
   const width = matrix.length;
-  return matrix.reduce(
-    (total, row, rowIndex) =>
-      total +
-      row.reduce((rowTotal, count, columnIndex) => {
-        const exponent = width - 1 - originIndex([rowIndex, columnIndex]);
-        return rowTotal + (exponent >= 0 ? count * 2 ** exponent : 0);
-      }, 0),
-    0
-  );
+  let total = 0n;
+  for (let rowIndex = 0; rowIndex < width; rowIndex += 1) {
+    const row = matrix[rowIndex];
+    for (let columnIndex = rowIndex; columnIndex < row.length; columnIndex += 1) {
+      const count = row[columnIndex];
+      if (count === 0) continue;
+      const exponent = width - 1 - columnIndex + rowIndex;
+      total += BigInt(count) * (1n << BigInt(exponent));
+    }
+  }
+  return total;
 }
 
-export function cellValue(size: number, coordinate: Coordinate): number {
-  return 2 ** (size - 1 - originIndex(coordinate));
+export function cellValue(size: number, coordinate: Coordinate): bigint {
+  return 1n << BigInt(size - 1 - originIndex(coordinate));
 }
