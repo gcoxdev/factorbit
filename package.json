@@ -8,6 +8,7 @@
     "build": "vite build",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "playthrough": "node scripts/playthrough.mjs",
+    "research:lift": "node scripts/affine-lift-proof.mjs",
     "research:trace": "node scripts/pattern-trace-search.mjs",
     "simulate": "node scripts/simulate-solver.mjs",
     "test": "vitest run",
