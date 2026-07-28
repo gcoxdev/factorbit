@@ -10,6 +10,7 @@
     "playthrough": "node scripts/playthrough.mjs",
     "research:middle": "node scripts/central-band-topology.mjs",
     "research:paths": "node scripts/adjacent-diagonal-paths.mjs",
+    "research:volume": "node scripts/copy-fiber-volume.mjs",
     "research:lift": "node scripts/affine-lift-proof.mjs",
     "research:compress": "node scripts/right-compression-proof.mjs",
     "research:trace": "node scripts/pattern-trace-search.mjs",
