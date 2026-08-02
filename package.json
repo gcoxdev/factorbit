@@ -15,6 +15,7 @@
     "research:lift": "node scripts/affine-lift-proof.mjs",
     "research:compress": "node scripts/right-compression-proof.mjs",
     "research:trace": "node scripts/pattern-trace-search.mjs",
+    "research:number-field": "node scripts/number-field-balance-audit.mjs",
     "simulate": "node scripts/simulate-solver.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
