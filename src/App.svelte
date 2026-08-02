@@ -15,6 +15,7 @@
     moveToken,
     firstPrimeBetween,
     randomPuzzle,
+    sameMatrix,
     splitToken,
     type Coordinate,
     type Matrix,
@@ -122,11 +123,20 @@
   let solutionLeft = $derived(solutionIndex === 1 ? puzzle.factorB : puzzle.factorA);
   let solutionRight = $derived(solutionIndex === 1 ? puzzle.factorA : puzzle.factorB);
 
+  function reachedSolutionIndex(candidate: Matrix): SolutionIndex | null {
+    if (sameMatrix(candidate, puzzle.solutions[0])) return 0;
+    if (sameMatrix(candidate, puzzle.solutions[1])) return 1;
+    return null;
+  }
+
   function record(action: (current: Matrix) => Matrix, message: string) {
     history = [...history, { matrix: cloneMatrix(matrix), moves }];
-    matrix = action(matrix);
+    const nextMatrix = action(matrix);
+    const reachedIndex = reachedSolutionIndex(nextMatrix);
+    matrix = nextMatrix;
     moves += 1;
     selected = null;
+    if (reachedIndex !== null) solutionIndex = reachedIndex;
     showSolvedCard = true;
     status = isSolved(matrix, puzzle.solutions) ? 'Factor lock acquired. The signal resolves cleanly.' : message;
   }
@@ -169,7 +179,6 @@
     history = history.slice(0, -1);
     selected = null;
     panel = null;
-    solutionIndex = 0;
     showSolvedCard = true;
     status = 'Last operation reversed.';
   }
@@ -180,7 +189,6 @@
     history = [];
     selected = null;
     panel = null;
-    solutionIndex = 0;
     showSolvedCard = true;
     status = 'Puzzle reset. The original product signal has been restored.';
   }
@@ -217,7 +225,6 @@
 
   function dismissSolvedCard() {
     showSolvedCard = false;
-    solutionIndex = 0;
     panel = 'solution';
     selected = null;
   }
@@ -263,7 +270,6 @@
   }
 
   function togglePanel(next: Exclude<Panel, null>) {
-    if (next === 'solution' && panel !== 'solution') solutionIndex = 0;
     panel = panel === next ? null : next;
     selected = null;
   }
