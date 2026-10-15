@@ -385,7 +385,7 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <svelte:head>
-  <title>Factorbit — Signal factorization puzzle</title>
+  <title>Factorbit — Factorization Puzzle</title>
 </svelte:head>
 
 <div class="app-shell">
