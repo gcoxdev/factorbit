@@ -409,7 +409,7 @@
       <span class="nav-rule"></span>
       <button class:engaged={panel === 'help'} type="button" onclick={() => togglePanel('help')} title="Field guide (H)"><Icon name="help" /><span>Guide</span></button>
       <button class:engaged={panel === 'settings'} type="button" onclick={() => togglePanel('settings')} title="Game settings (G)"><Icon name="settings" /><span>Settings</span></button>
-      <button class:engaged={panel === 'solution'} type="button" onclick={() => togglePanel('solution')} title="Solution (S)"><Icon name="eye" /><span>Resolve</span></button>
+      <button class:engaged={panel === 'solution'} type="button" onclick={() => togglePanel('solution')} title="Solution (S)"><Icon name="eye" /><span>Solution</span></button>
     </nav>
   </div>
   <p class="sr-only game-status" aria-live="polite">{status}</p>
@@ -419,7 +419,7 @@
       {#if panel === 'solution'}
         <div class="solution-trace" transition:fly={{ y: -8, duration: 180 }}>
           <div class="trace-equation">
-            <span>SOLUTION TRACE</span>
+            <span>SOLUTION</span>
             <div class="operand"><strong>{solutionLeft}</strong><code>{solutionLeft.toString(2)}</code></div>
             <b>×</b>
             <div class="operand"><strong>{solutionRight}</strong><code>{solutionRight.toString(2)}</code></div>
@@ -431,7 +431,7 @@
             <button class:active={solutionIndex === 1} type="button" onclick={() => (solutionIndex = 1)}>B × A</button>
             <button class:active={solutionIndex === 2} type="button" onclick={() => (solutionIndex = 2)}>Split</button>
           </div>
-          <button class="icon-button" type="button" onclick={() => (panel = null)} aria-label="Close solution trace"><Icon name="close" /></button>
+          <button class="icon-button" type="button" onclick={() => (panel = null)} aria-label="Close solution"><Icon name="close" /></button>
         </div>
       {/if}
 
@@ -450,7 +450,7 @@
       {#if solved && showSolvedCard}
         <aside class="solved-card" transition:fly={{ y: 14, duration: 300 }} aria-label="Puzzle solved">
           <button class="icon-button dismiss-solved" type="button" onclick={dismissSolvedCard} aria-label="Dismiss solved confirmation"><Icon name="close" /></button>
-          <span>FACTOR LOCK / CONFIRMED</span>
+          <span>PUZZLE SOLVED</span>
           <div class="solved-equation" aria-label={`${puzzle.factorA} times ${puzzle.factorB} equals ${puzzle.product}`}>
             <div class="completion-operand"><strong>{puzzle.factorA}</strong><code>{puzzle.factorA.toString(2)}</code></div>
             <b>×</b>
@@ -458,8 +458,8 @@
             <b>=</b>
             <div class="completion-operand product"><strong>{puzzle.product}</strong><code>{puzzle.productBits}</code></div>
           </div>
-          <p>Signal resolved in {moves} move{moves === 1 ? '' : 's'} with full value integrity.</p>
-          <button class="next-signal" type="button" onclick={newGame}>Acquire next signal <Icon name="arrow" /></button>
+          <p>Solved in {moves} move{moves === 1 ? '' : 's'}.</p>
+          <button class="next-signal" type="button" onclick={newGame}>Next Game <Icon name="arrow" /></button>
         </aside>
       {/if}
     </section>
@@ -469,7 +469,7 @@
     <div class="scrim" transition:fade onclick={(event) => event.target === event.currentTarget && (panel = null)} role="presentation">
       <aside class="panel" transition:fly={{ x: 30, duration: 220 }} aria-label={`${panel} panel`}>
         <div class="panel-head">
-          <span>{panel === 'help' ? 'FIELD GUIDE' : 'GAME SETTINGS'}</span>
+          <span>{panel === 'help' ? 'GUIDE' : 'GAME SETTINGS'}</span>
           <button class="icon-button" type="button" onclick={() => (panel = null)} aria-label="Close panel"><Icon name="close" /></button>
         </div>
 
@@ -482,12 +482,12 @@
               <li><b>03</b><div><strong>JOIN TO THE LEFT</strong><p>Two signals at one node combine into one worth twice as much.</p></div></li>
               <li><b>04</b><div><strong>FIND THE PATTERN</strong><p>Finish when active rows form the binary pattern of one factor, repeated by the other.</p></div></li>
             </ol>
-            <button class="panel-cta" type="button" onclick={loadTeachingPuzzle}>Load training signal 15</button>
+            <button class="panel-cta" type="button" onclick={loadTeachingPuzzle}>Load Training Game</button>
             <div class="shortcuts"><span>N NEW</span><span>R RESET</span><span>Z UNDO</span><span>G SETTINGS</span><span><b>←</b> JOIN</span><span><b>→</b> SPLIT</span></div>
           </div>
         {:else if panel === 'settings'}
           <form class="settings-content" onsubmit={(event) => { event.preventDefault(); saveSettings(); }}>
-            <p class="panel-lede">Tune the hidden factor ranges and choose which experimental signal rules are active.</p>
+            <p class="panel-lede">Choose the range for each factor.</p>
             <fieldset>
               <legend>FACTOR A</legend>
               <label><span>MINIMUM</span><input type="text" inputmode="numeric" pattern="[0-9]*" bind:value={draftRange.factorAMinimum} /></label>
@@ -498,7 +498,6 @@
               <label><span>MINIMUM</span><input type="text" inputmode="numeric" pattern="[0-9]*" bind:value={draftRange.factorBMinimum} /></label>
               <label><span>MAXIMUM</span><input type="text" inputmode="numeric" pattern="[0-9]*" bind:value={draftRange.factorBMaximum} /></label>
             </fieldset>
-            <div class="range-scale"><span>QUICK</span><i></i><span>COMPLEX</span></div>
             <fieldset class="rule-settings">
               <legend>EXPERIMENTAL RULES</legend>
               <label class="rule-toggle">
@@ -519,7 +518,7 @@
               </label>
             </fieldset>
             {#if settingsError}<p class="form-error" role="alert">{settingsError}</p>{/if}
-            <button class="panel-cta" type="submit">Save & acquire new signal</button>
+            <button class="panel-cta" type="submit">Save & new game</button>
           </form>
         {/if}
       </aside>
