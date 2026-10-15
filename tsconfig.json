@@ -16,11 +16,5 @@
     "skipLibCheck": true
   },
   "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.svelte", "vite.config.ts"],
-  "exclude": [
-    "src/**/*.test.ts",
-    "src/lib/balance-hint.ts",
-    "src/lib/perimeter-collision.ts",
-    "src/lib/quadratic-ensemble.ts",
-    "src/lib/solver.ts"
-  ]
+  "exclude": ["src/**/*.test.ts"]
 }
