@@ -4,29 +4,44 @@
   import Icon from './lib/Icon.svelte';
   import {
     DEFAULT_RANGE,
-    canJoin,
-    canSplit,
-    cloneMatrix,
     createPuzzle,
     diagonalCells,
     isSameCoordinate,
-    isSolved,
-    joinTokens,
-    moveToken,
     firstPrimeBetween,
     randomPuzzle,
-    sameMatrix,
-    splitToken,
     type Coordinate,
-    type Matrix,
     type Puzzle,
     type RangeSettings
   } from './lib/game';
+  import {
+    amountAtLeast,
+    canPlayJoin,
+    canPlaySplit,
+    clonePlayMatrix,
+    formatSignalAmount,
+    isPositiveAmount,
+    joinPlaySignals,
+    movePlaySignal,
+    playMatrixMatches,
+    rightCompressPlayMatrix,
+    splitPlaySignal,
+    toPlayMatrix,
+    type PlayMatrix
+  } from './lib/play-matrix';
 
   type Panel = 'help' | 'settings' | 'solution' | null;
   type SolutionIndex = 0 | 1 | 2;
-  type HistoryEntry = { matrix: Matrix; moves: number };
+  type HistoryEntry = { matrix: PlayMatrix; moves: number };
   type RangeDraft = Record<keyof RangeSettings, string>;
+  interface RuleSettings {
+    allowOverflowSplits: boolean;
+    allowFractionalJoins: boolean;
+  }
+
+  const DEFAULT_RULES: RuleSettings = {
+    allowOverflowSplits: false,
+    allowFractionalJoins: false
+  };
 
   const parseStoredInteger = (value: unknown): bigint | null => {
     if (typeof value === 'string' && /^\d+$/.test(value)) return BigInt(value);
@@ -85,6 +100,22 @@
     }
   })();
 
+  const storedRules = (() => {
+    try {
+      const value = JSON.parse(
+        localStorage.getItem('factorbit-rules') ?? 'null'
+      ) as Partial<RuleSettings> | null;
+      return {
+        allowOverflowSplits:
+          value?.allowOverflowSplits === true,
+        allowFractionalJoins:
+          value?.allowFractionalJoins === true
+      } satisfies RuleSettings;
+    } catch {
+      return DEFAULT_RULES;
+    }
+  })();
+
   const rangeDraft = (value: RangeSettings): RangeDraft => ({
     factorAMinimum: value.factorAMinimum.toString(),
     factorAMaximum: value.factorAMaximum.toString(),
@@ -95,8 +126,10 @@
   const initialPuzzle = randomPuzzle(storedRange);
   let range = $state<RangeSettings>({ ...storedRange });
   let draftRange = $state<RangeDraft>(rangeDraft(storedRange));
+  let rules = $state<RuleSettings>({ ...storedRules });
+  let draftRules = $state<RuleSettings>({ ...storedRules });
   let puzzle = $state.raw<Puzzle>(initialPuzzle);
-  let matrix = $state.raw<Matrix>(cloneMatrix(initialPuzzle.matrix));
+  let matrix = $state.raw<PlayMatrix>(toPlayMatrix(initialPuzzle.matrix));
   let selected = $state<Coordinate | null>(null);
   let moves = $state(0);
   let history = $state.raw<HistoryEntry[]>([]);
@@ -114,23 +147,38 @@
       : 100
   );
 
-  let solved = $derived(isSolved(matrix, puzzle.solutions));
+  let solved = $derived(
+    playMatrixMatches(matrix, puzzle.solutions[0]) ||
+      playMatrixMatches(matrix, puzzle.solutions[1])
+  );
   let legalMoves = $derived(selected ? diagonalCells(matrix.length, selected) : []);
-  let splitReady = $derived(selected ? canSplit(matrix, selected) : false);
-  let joinReady = $derived(selected ? canJoin(matrix, selected) : false);
-  let solutionMatrices = $derived([puzzle.solutions[0], puzzle.solutions[1], puzzle.splitSolution] as const);
+  let splitReady = $derived(
+    selected
+      ? canPlaySplit(matrix, selected, rules.allowOverflowSplits)
+      : false
+  );
+  let joinReady = $derived(
+    selected
+      ? canPlayJoin(matrix, selected, rules.allowFractionalJoins)
+      : false
+  );
+  let solutionMatrices = $derived([
+    toPlayMatrix(puzzle.solutions[0]),
+    toPlayMatrix(puzzle.solutions[1]),
+    toPlayMatrix(puzzle.splitSolution)
+  ] as const);
   let boardMatrix = $derived(panel === 'solution' ? solutionMatrices[solutionIndex] : matrix);
   let solutionLeft = $derived(solutionIndex === 1 ? puzzle.factorB : puzzle.factorA);
   let solutionRight = $derived(solutionIndex === 1 ? puzzle.factorA : puzzle.factorB);
 
-  function reachedSolutionIndex(candidate: Matrix): SolutionIndex | null {
-    if (sameMatrix(candidate, puzzle.solutions[0])) return 0;
-    if (sameMatrix(candidate, puzzle.solutions[1])) return 1;
+  function reachedSolutionIndex(candidate: PlayMatrix): SolutionIndex | null {
+    if (playMatrixMatches(candidate, puzzle.solutions[0])) return 0;
+    if (playMatrixMatches(candidate, puzzle.solutions[1])) return 1;
     return null;
   }
 
-  function record(action: (current: Matrix) => Matrix, message: string) {
-    history = [...history, { matrix: cloneMatrix(matrix), moves }];
+  function record(action: (current: PlayMatrix) => PlayMatrix, message: string) {
+    history = [...history, { matrix: clonePlayMatrix(matrix), moves }];
     const nextMatrix = action(matrix);
     const reachedIndex = reachedSolutionIndex(nextMatrix);
     matrix = nextMatrix;
@@ -138,7 +186,9 @@
     selected = null;
     if (reachedIndex !== null) solutionIndex = reachedIndex;
     showSolvedCard = true;
-    status = isSolved(matrix, puzzle.solutions) ? 'Factor lock acquired. The signal resolves cleanly.' : message;
+    status = reachedIndex !== null
+      ? 'Factor lock acquired. The signal resolves cleanly.'
+      : message;
   }
 
   function chooseCell(coordinate: Coordinate) {
@@ -150,31 +200,64 @@
     }
     if (selected && legalMoves.some((candidate) => isSameCoordinate(candidate, coordinate))) {
       const source = selected;
-      record((current) => moveToken(current, source, coordinate), 'Signal relocated. Its binary value is unchanged.');
+      record(
+        (current) => movePlaySignal(current, source, coordinate),
+        'Signal relocated. Its binary value is unchanged.'
+      );
       return;
     }
-    if (count > 0) {
+    if (isPositiveAmount(count)) {
       selected = coordinate;
-      status = count > 1
-        ? `${count} signals share this node. Move one, split one, or join a pair.`
+      const amount = formatSignalAmount(count);
+      status = amountAtLeast(count, 2)
+        ? `${amount} signals share this node. Move one, split one, or join a pair.`
         : 'Equivalent positions are now illuminated along this signal path.';
     }
   }
 
   function splitSelected() {
     if (!selected || !splitReady) return;
-    record((current) => splitToken(current, selected!), 'One signal became two signals worth half as much.');
+    record(
+      (current) => splitPlaySignal(
+        current,
+        selected!,
+        rules.allowOverflowSplits
+      ),
+      'One signal became two signals worth half as much.'
+    );
   }
 
   function joinSelected() {
     if (!selected || !joinReady) return;
-    record((current) => joinTokens(current, selected!), 'Two equal signals combined into one signal worth twice as much.');
+    record(
+      (current) => joinPlaySignals(
+        current,
+        selected!,
+        rules.allowFractionalJoins
+      ),
+      rules.allowFractionalJoins
+        ? 'Signals joined left with exact fractional balance.'
+        : 'Two equal signals combined into one signal worth twice as much.'
+    );
+  }
+
+  function compressRight() {
+    if (solved || panel === 'solution') return;
+    record(
+      (current) => rightCompressPlayMatrix(
+        current,
+        rules.allowOverflowSplits
+      ),
+      rules.allowOverflowSplits
+        ? 'All value compressed into the rightmost cell.'
+        : 'Signals compressed to the board’s legal diagonal capacities.'
+    );
   }
 
   function undo() {
     const previous = history.at(-1);
     if (!previous) return;
-    matrix = cloneMatrix(previous.matrix);
+    matrix = clonePlayMatrix(previous.matrix);
     moves = previous.moves;
     history = history.slice(0, -1);
     selected = null;
@@ -184,7 +267,7 @@
   }
 
   function reset() {
-    matrix = cloneMatrix(puzzle.matrix);
+    matrix = toPlayMatrix(puzzle.matrix);
     moves = 0;
     history = [];
     selected = null;
@@ -195,7 +278,7 @@
 
   function newGame() {
     puzzle = randomPuzzle(range);
-    matrix = cloneMatrix(puzzle.matrix);
+    matrix = toPlayMatrix(puzzle.matrix);
     moves = 0;
     history = [];
     selected = null;
@@ -207,7 +290,7 @@
 
   function loadTeachingPuzzle() {
     puzzle = createPuzzle(3n, 5n);
-    matrix = cloneMatrix(puzzle.matrix);
+    matrix = toPlayMatrix(puzzle.matrix);
     moves = 0;
     history = [];
     selected = null;
@@ -260,7 +343,10 @@
     settingsError = '';
     range = parsed;
     draftRange = rangeDraft(range);
+    rules = { ...draftRules };
+    draftRules = { ...rules };
     localStorage.setItem('factorbit-range', JSON.stringify(rangeDraft(range)));
+    localStorage.setItem('factorbit-rules', JSON.stringify(rules));
     newGame();
   }
 
@@ -326,9 +412,10 @@
       <button type="button" onclick={newGame} title="New puzzle (N)"><Icon name="new" /><span>New</span></button>
       <button type="button" onclick={undo} disabled={!history.length} title="Undo (Z)"><Icon name="undo" /><span>Undo</span></button>
       <button type="button" onclick={reset} title="Reset puzzle (R)"><Icon name="reset" /><span>Reset</span></button>
+      <button type="button" onclick={compressRight} disabled={solved || panel === 'solution'} title="Compress all signals to the right"><Icon name="compress" /><span>Compress</span></button>
       <span class="nav-rule"></span>
       <button class:engaged={panel === 'help'} type="button" onclick={() => togglePanel('help')} title="Field guide (H)"><Icon name="help" /><span>Guide</span></button>
-      <button class:engaged={panel === 'settings'} type="button" onclick={() => togglePanel('settings')} title="Game settings (G)"><Icon name="settings" /><span>Range</span></button>
+      <button class:engaged={panel === 'settings'} type="button" onclick={() => togglePanel('settings')} title="Game settings (G)"><Icon name="settings" /><span>Settings</span></button>
       <button class:engaged={panel === 'solution'} type="button" onclick={() => togglePanel('solution')} title="Solution (S)"><Icon name="eye" /><span>Resolve</span></button>
     </nav>
   </div>
@@ -399,7 +486,7 @@
     <div class="scrim" transition:fade onclick={(event) => event.target === event.currentTarget && (panel = null)} role="presentation">
       <aside class="panel" transition:fly={{ x: 30, duration: 220 }} aria-label={`${panel} panel`}>
         <div class="panel-head">
-          <span>{panel === 'help' ? 'FIELD GUIDE' : 'FACTOR RANGES'}</span>
+          <span>{panel === 'help' ? 'FIELD GUIDE' : 'GAME SETTINGS'}</span>
           <button class="icon-button" type="button" onclick={() => (panel = null)} aria-label="Close panel"><Icon name="close" /></button>
         </div>
 
@@ -413,11 +500,11 @@
               <li><b>04</b><div><strong>FIND THE PATTERN</strong><p>Finish when active rows form the binary pattern of one factor, repeated by the other.</p></div></li>
             </ol>
             <button class="panel-cta" type="button" onclick={loadTeachingPuzzle}>Load training signal 15</button>
-            <div class="shortcuts"><span>N NEW</span><span>R RESET</span><span>Z UNDO</span><span>G RANGE</span><span><b>←</b> JOIN</span><span><b>→</b> SPLIT</span></div>
+            <div class="shortcuts"><span>N NEW</span><span>R RESET</span><span>Z UNDO</span><span>G SETTINGS</span><span><b>←</b> JOIN</span><span><b>→</b> SPLIT</span></div>
           </div>
         {:else if panel === 'settings'}
           <form class="settings-content" onsubmit={(event) => { event.preventDefault(); saveSettings(); }}>
-            <p class="panel-lede">Each hidden prime factor is selected independently from the inclusive range you define.</p>
+            <p class="panel-lede">Tune the hidden factor ranges and choose which experimental signal rules are active.</p>
             <fieldset>
               <legend>FACTOR A</legend>
               <label><span>MINIMUM</span><input type="text" inputmode="numeric" pattern="[0-9]*" bind:value={draftRange.factorAMinimum} /></label>
@@ -429,6 +516,25 @@
               <label><span>MAXIMUM</span><input type="text" inputmode="numeric" pattern="[0-9]*" bind:value={draftRange.factorBMaximum} /></label>
             </fieldset>
             <div class="range-scale"><span>QUICK</span><i></i><span>COMPLEX</span></div>
+            <fieldset class="rule-settings">
+              <legend>EXPERIMENTAL RULES</legend>
+              <label class="rule-toggle">
+                <input type="checkbox" bind:checked={draftRules.allowOverflowSplits} />
+                <span class="toggle-control" aria-hidden="true"><i></i></span>
+                <span class="rule-copy">
+                  <strong>UNBOUNDED SPLITS</strong>
+                  <small>Ignore diagonal capacity. Full compression will place the entire product in the rightmost cell.</small>
+                </span>
+              </label>
+              <label class="rule-toggle">
+                <input type="checkbox" bind:checked={draftRules.allowFractionalJoins} />
+                <span class="toggle-control" aria-hidden="true"><i></i></span>
+                <span class="rule-copy">
+                  <strong>FRACTIONAL JOINS</strong>
+                  <small>Join a lone signal left into an exact half, then continue with quarters, eighths, and beyond.</small>
+                </span>
+              </label>
+            </fieldset>
             {#if settingsError}<p class="form-error" role="alert">{settingsError}</p>{/if}
             <button class="panel-cta" type="submit">Save & acquire new signal</button>
           </form>

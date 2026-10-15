@@ -1,9 +1,16 @@
 <script lang="ts">
-  import type { Coordinate, Matrix } from './game';
+  import type { Coordinate } from './game';
   import { cellValue, isSameCoordinate, originIndex } from './game';
+  import {
+    formatSignalAmount,
+    isOneAmount,
+    isPositiveAmount,
+    type PlayMatrix,
+    type SignalAmount
+  } from './play-matrix';
 
   interface Props {
-    matrix: Matrix;
+    matrix: PlayMatrix;
     scale: number;
     selected: Coordinate | null;
     legalMoves: Coordinate[];
@@ -17,9 +24,12 @@
   const isLegal = (coordinate: Coordinate) =>
     legalMoves.some((candidate) => isSameCoordinate(candidate, coordinate));
 
-  const cellLabel = (coordinate: Coordinate, count: number) => {
+  const cellLabel = (coordinate: Coordinate, count: SignalAmount) => {
     const value = cellValue(matrix.length, coordinate);
-    if (count > 0) return `${count} signal${count === 1 ? '' : 's'}, value ${value} each`;
+    if (isPositiveAmount(count)) {
+      const amount = formatSignalAmount(count);
+      return `${amount} signal${isOneAmount(count) ? '' : 's'}, value ${value} each`;
+    }
     if (isLegal(coordinate)) return `Move selected signal here, value ${value}`;
     return `Empty signal position, value ${value}`;
   };
@@ -45,7 +55,7 @@
     {#each matrix as row, rowIndex (`row-${rowIndex}`)}
       {#each row as count, columnIndex (`cell-${rowIndex}-${columnIndex}`)}
         {@const coordinate = [rowIndex, columnIndex] as const}
-        {@const active = count > 0}
+        {@const active = isPositiveAmount(count)}
         {@const chosen = selected && isSameCoordinate(selected, coordinate)}
         {@const legal = isLegal(coordinate)}
         {@const belowDiagonal = originIndex(coordinate) < 0}
@@ -65,7 +75,9 @@
           {#if active}
             <span class="signal" aria-hidden="true">
               <span class="signal-core"></span>
-              {#if count > 1}<strong>{count}</strong>{/if}
+              {#if !isOneAmount(count)}
+                <strong title={formatSignalAmount(count)}>{formatSignalAmount(count)}</strong>
+              {/if}
             </span>
           {:else if legal}
             <span class="landing" aria-hidden="true"></span>
@@ -202,11 +214,16 @@
 
   .signal strong {
     position: absolute;
-    right: -0.35rem;
+    left: 50%;
     top: -0.45rem;
+    max-width: calc(var(--cell) - 0.3rem);
     min-width: 1.2rem;
     height: 1.2rem;
     padding: 0 0.18rem;
+    overflow: hidden;
+    transform: translateX(-50%);
+    text-overflow: ellipsis;
+    white-space: nowrap;
     border-radius: 99px;
     background: var(--paper);
     color: var(--ink);

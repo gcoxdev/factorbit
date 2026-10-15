@@ -4,3 +4,26 @@ dist/
 *.local
 coverage/
 graphify-out/
+
+# Local research, planning, agent state, and recovery copies.
+/.agents/
+/.codex/
+/analysis/
+/factorbit-plan/
+/raw/
+/scripts/
+/.local-backups/
+
+# Standalone solver experiments and tests are not used by the game.
+/src/lib/balance-hint.ts
+/src/lib/perimeter-collision.ts
+/src/lib/quadratic-ensemble.ts
+/src/lib/solver.ts
+/src/**/*.test.ts
+
+# Local tool output and credentials.
+__pycache__/
+*.pyc
+*.log
+.env
+.env.*

@@ -1,6 +1,6 @@
 <script lang="ts">
   interface Props {
-    name: 'new' | 'undo' | 'reset' | 'help' | 'settings' | 'eye' | 'split' | 'join' | 'close' | 'arrow';
+    name: 'new' | 'undo' | 'reset' | 'compress' | 'help' | 'settings' | 'eye' | 'split' | 'join' | 'close' | 'arrow';
     size?: number;
   }
 
@@ -24,6 +24,8 @@
     <path d="M9 7 4 12l5 5"></path><path d="M5 12h8a6 6 0 0 1 6 6"></path>
   {:else if name === 'reset'}
     <path d="M4 11a8 8 0 1 1 2.3 6"></path><path d="M4 4v7h7"></path>
+  {:else if name === 'compress'}
+    <path d="M4 6h10M4 12h7M4 18h4"></path><path d="m14 15 3 3 3-3M17 5v13"></path>
   {:else if name === 'help'}
     <circle cx="12" cy="12" r="9"></circle><path d="M9.7 9a2.5 2.5 0 1 1 3.2 2.4c-.9.3-.9 1-.9 1.6"></path><path d="M12 17h.01"></path>
   {:else if name === 'settings'}

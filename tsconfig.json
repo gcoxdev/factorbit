@@ -13,8 +13,14 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "skipLibCheck": true,
-    "types": ["vitest/globals"]
+    "skipLibCheck": true
   },
-  "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.svelte", "vite.config.ts"]
+  "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.svelte", "vite.config.ts"],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/lib/balance-hint.ts",
+    "src/lib/perimeter-collision.ts",
+    "src/lib/quadratic-ensemble.ts",
+    "src/lib/solver.ts"
+  ]
 }
