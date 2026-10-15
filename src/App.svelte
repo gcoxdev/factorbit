@@ -137,7 +137,6 @@
   let solutionIndex = $state<SolutionIndex>(0);
   let settingsError = $state('');
   let status = $state('Select a live signal to inspect its possible paths.');
-  let showCoach = $state(localStorage.getItem('factorbit-coach-seen') !== 'true');
   let showSolvedCard = $state(true);
   let boardScale = $state(
     Number.isInteger(storedBoardScale) &&
@@ -298,12 +297,6 @@
     solutionIndex = 0;
     showSolvedCard = true;
     status = 'Training signal 15 loaded. Start by selecting any red signal.';
-    showCoach = true;
-  }
-
-  function dismissCoach() {
-    showCoach = false;
-    localStorage.setItem('factorbit-coach-seen', 'true');
   }
 
   function dismissSolvedCard() {
@@ -453,16 +446,6 @@
           oncell={chooseCell}
         />
       </div>
-
-      {#if showCoach && !panel && !solved}
-        <aside class="coach" transition:fly={{ y: 12, duration: 220 }}>
-          <div class="coach-index">FIELD NOTE 01</div>
-          <button class="icon-button" type="button" onclick={dismissCoach} aria-label="Dismiss field note"><Icon name="close" size={17} /></button>
-          <h2>Same value.<br />Different position.</h2>
-          <p>Select a red signal. Every illuminated point on its diagonal carries exactly the same binary value, so moving there is always safe.</p>
-          <button class="text-button" type="button" onclick={dismissCoach}>Begin experiment <Icon name="arrow" size={17} /></button>
-        </aside>
-      {/if}
 
       {#if solved && showSolvedCard}
         <aside class="solved-card" transition:fly={{ y: 14, duration: 300 }} aria-label="Puzzle solved">

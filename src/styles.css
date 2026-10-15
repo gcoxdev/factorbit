@@ -84,13 +84,6 @@ main { width: min(100%, 1540px); margin: 0 auto; padding: 0 clamp(1rem, 4vw, 4.5
 .operand code { color: var(--cyan); font-size: 0.55rem; letter-spacing: 0.1em; }
 .operand.product { padding-left: 0.65rem; border-left: 1px solid var(--line); }
 .solution-trace .solution-tabs { width: 16rem; margin: 0; }
-.coach { position: absolute; top: 4.4rem; left: 1.4rem; z-index: 5; width: min(22rem, calc(100% - 2.8rem)); padding: 1.25rem 1.35rem 1.35rem; border: 1px solid #5a574e; background: #e6dfd2; color: #171714; box-shadow: 0.7rem 0.7rem 0 #0008; transform: rotate(-0.5deg); }
-.coach::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, transparent 0 1.4rem, #0000000a 1.4rem calc(1.4rem + 1px)); }
-.coach-index { font-size: 0.52rem; letter-spacing: 0.12em; color: #6f6b63; }
-.coach .icon-button { position: absolute; top: 0.75rem; right: 0.75rem; color: #171714; }
-.coach h2 { margin: 1.3rem 0 0.8rem; font: 400 2.5rem/0.92 'Instrument Serif', Georgia, serif; }
-.coach p { margin: 0 0 1.2rem; font-size: 0.65rem; line-height: 1.65; }
-.text-button { position: relative; z-index: 2; padding: 0; border: 0; border-bottom: 1px solid; background: none; color: #171714; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; }
 .icon-button { width: 2rem; height: 2rem; padding: 0; border: 0; background: transparent; display: grid; place-items: center; color: var(--muted); cursor: pointer; }
 
 .solved-card { position: absolute; inset: 3rem 0 auto; z-index: 6; width: min(34rem, calc(100% - 2rem)); margin: auto; padding: 2.6rem; border: 1px solid var(--acid); background: #181913f2; box-shadow: 0 2rem 8rem #000; text-align: center; }
@@ -188,7 +181,6 @@ main { width: min(100%, 1540px); margin: 0 auto; padding: 0 clamp(1rem, 4vw, 4.5
   .completion-operand strong { font-size: 2.2rem; }
   .completion-operand code { font-size: 0.56rem; letter-spacing: 0.07em; overflow-wrap: anywhere; }
   .completion-operand.product { padding-left: 0.4rem; }
-  .coach { left: 0.8rem; width: calc(100% - 1.6rem); }
   .settings-content fieldset { grid-template-columns: 1fr; }
 }
 
